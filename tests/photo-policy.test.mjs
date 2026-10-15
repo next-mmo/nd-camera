@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assertLocalUri, assertImageSize, displayName, imageExtension, normalizeImageMime, parseSharedImage, MAX_IMAGE_BYTES } from '../src/features/photos/photo-policy.ts';
-import { ND_STYLES, requireAvailableProfile, getStyleMatrix, createEditRecipe } from '../src/features/styles/catalog.ts';
+import { ND_STYLES, requireAvailableProfile, isAvailableProfile, getStyleMatrix, createEditRecipe } from '../src/features/styles/catalog.ts';
 
 test('accepts a local Android image share', () => {
   assert.deepEqual(parseSharedImage([{ shareType: 'image', mimeType: 'image/jpeg', value: 'content://photos/123' }]), { uri: 'content://photos/123', mimeType: 'image/jpeg' });
@@ -103,6 +103,22 @@ test('supports iOS Photographic Styles and Leica camera profiles', () => {
   const cool = getStyleMatrix('ios-standard', 1, 0, -0.5);
   assert.ok(warm[0] > cool[0]); // warmer has more red
   assert.ok(warm[12] < cool[12]); // warmer has less blue
+});
+
+test('supports high-contrast Gray Mode for instant monochrome verification', () => {
+  assert.ok(isAvailableProfile('gray-mode'));
+  const gray = getStyleMatrix('gray-mode', 1);
+  assert.equal(gray.length, 20);
+  // Pure grayscale converts RGB to luminance equally on all three rows
+  assert.ok(Math.abs(gray[0] - 0.299) < 0.001);
+  assert.ok(Math.abs(gray[1] - 0.587) < 0.001);
+  assert.ok(Math.abs(gray[2] - 0.114) < 0.001);
+  assert.ok(Math.abs(gray[5] - 0.299) < 0.001);
+  assert.ok(Math.abs(gray[6] - 0.587) < 0.001);
+  assert.ok(Math.abs(gray[7] - 0.114) < 0.001);
+  assert.ok(Math.abs(gray[10] - 0.299) < 0.001);
+  assert.ok(Math.abs(gray[11] - 0.587) < 0.001);
+  assert.ok(Math.abs(gray[12] - 0.114) < 0.001);
 });
 
 

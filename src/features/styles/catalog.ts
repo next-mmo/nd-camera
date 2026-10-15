@@ -133,6 +133,18 @@ export const RICH_CONTRAST_MATRIX: ColorMatrix = [
   0.00,  0.00,  0.00, 1.00,  0.00,
 ];
 
+/**
+ * Studio B&W / Gray Mode:
+ * Pure grayscale luminance conversion (0.299 R, 0.587 G, 0.114 B) with zero color tint.
+ * 100% desaturated monochrome for immediate visual test and high-contrast verification.
+ */
+export const GRAY_MODE_MATRIX: ColorMatrix = [
+  0.299, 0.587, 0.114, 0.00, 0.00,
+  0.299, 0.587, 0.114, 0.00, 0.00,
+  0.299, 0.587, 0.114, 0.00, 0.00,
+  0.000, 0.000, 0.000, 1.00, 0.00,
+];
+
 export const PROFILE_MATRICES: Record<string, ColorMatrix> = {
   // iOS Styles
   'ios-standard': IOS_STANDARD_MATRIX,
@@ -146,6 +158,9 @@ export const PROFILE_MATRICES: Record<string, ColorMatrix> = {
   'leica-vibrant': LEICA_VIBRANT_MATRIX,
   'leica-mono': LEICA_MONO_MATRIX,
 
+  // High-contrast Gray Mode (Instant Visual Test)
+  'gray-mode': GRAY_MODE_MATRIX,
+
   // ND Core
   natural: NATURAL_MATRIX,
   warm: WARM_PORTRAIT_MATRIX,
@@ -157,7 +172,7 @@ export interface StyleDefinition {
   readonly name: string;
   readonly subtitle: string;
   readonly description: string;
-  readonly category: 'ios' | 'leica' | 'nd';
+  readonly category: 'ios' | 'leica' | 'bw' | 'nd';
   readonly defaultVignette: number;
   readonly available: boolean;
 }
@@ -234,8 +249,17 @@ export const ND_STYLES: readonly StyleDefinition[] = [
     name: 'Leica Monochrom',
     subtitle: 'Velvety Black & White',
     description: 'Red-filtered luminance with deep silver highlights, velvety blacks, and dramatic sky contrast.',
-    category: 'leica',
+    category: 'bw',
     defaultVignette: 0.25,
+    available: true,
+  },
+  {
+    id: 'gray-mode',
+    name: 'B&W Gray Mode',
+    subtitle: 'Pure Monochrome',
+    description: '100% pure desaturated grayscale. Perfect for high-contrast test and timeless monochrome.',
+    category: 'bw',
+    defaultVignette: 0.0,
     available: true,
   },
 

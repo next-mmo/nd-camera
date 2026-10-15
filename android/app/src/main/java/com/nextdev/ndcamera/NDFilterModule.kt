@@ -19,15 +19,21 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
+import com.facebook.react.module.annotations.ReactModule
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.UUID
 
+@ReactModule(name = NDFilterModule.NAME)
 class NDFilterModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "NDFilter"
+    companion object {
+        const val NAME = "NDFilter"
+    }
+
+    override fun getName(): String = NAME
 
     @ReactMethod
     fun applyColorMatrix(

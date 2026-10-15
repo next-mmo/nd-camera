@@ -13,11 +13,11 @@ import { importLocalPhoto, pickPhoto, shareOriginal } from './features/photos/ph
 import { errorMessage, type ImportedPhoto, type PhotoInput } from './features/photos/photo-policy';
 import { useIncomingPhoto } from './features/photos/use-incoming-photo';
 import { ND_STYLES, type StyleDefinition } from './features/styles/catalog';
-import { renderStyledPhoto, shareStyled, type RenderResult } from './features/styles/style-service';
+import { renderStyledPhoto, shareStyled, isNativeFilterAvailable, type RenderResult } from './features/styles/style-service';
 import { SnapseedModal } from './features/snapseed/SnapseedModal';
 import './index.css';
 
-type CategoryFilter = 'all' | 'ios' | 'leica' | 'nd';
+type CategoryFilter = 'all' | 'ios' | 'leica' | 'bw' | 'nd';
 
 export function Studio() {
   const [originalPhoto, setOriginalPhoto] = useState<ImportedPhoto | null>(null);
@@ -304,6 +304,49 @@ export function Studio() {
             </Text>
           </View>
 
+          {/* Engine Status Banner */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: isNativeFilterAvailable() ? '#0f2418' : '#241a0e',
+              borderColor: isNativeFilterAvailable() ? '#22c55e' : '#f59e0b',
+              borderWidth: 1,
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+            }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: isNativeFilterAvailable() ? '#22c55e' : '#f59e0b',
+                }}
+              />
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '700',
+                  color: isNativeFilterAvailable() ? '#86efac' : '#fde68a',
+                }}>
+                {isNativeFilterAvailable()
+                  ? 'Hardware Filter Engine: Active'
+                  : 'Native Engine: Install nd-camera-debug.apk'}
+              </Text>
+            </View>
+            <Text
+              style={{
+                fontSize: 10,
+                color: isNativeFilterAvailable() ? '#4ade80' : '#fbbf24',
+                fontWeight: '600',
+              }}>
+              {isNativeFilterAvailable() ? 'ColorMatrix GPU ON' : 'Expo Go limited'}
+            </Text>
+          </View>
+
           {/* Snapseed Presets Fast-Access Banner */}
           <Pressable
             onPress={() => setSnapseedVisible(true)}
@@ -370,15 +413,20 @@ export function Studio() {
                       position: 'absolute',
                       top: 14,
                       left: 14,
-                      backgroundColor: 'rgba(11, 16, 23, 0.88)',
+                      backgroundColor: showOriginalComparison ? 'rgba(220, 38, 38, 0.95)' : 'rgba(11, 16, 23, 0.88)',
                       paddingHorizontal: 12,
                       paddingVertical: 6,
                       borderRadius: 16,
                       borderWidth: 1,
-                      borderColor: '#222f3e',
+                      borderColor: showOriginalComparison ? '#ef4444' : '#222f3e',
                     }}>
-                    <Text style={{ color: '#88e040', fontSize: 12, fontWeight: '700' }}>
-                      {showOriginalComparison ? 'Comparing: Original' : styleLabel}
+                    <Text
+                      style={{
+                        color: showOriginalComparison ? '#ffffff' : '#88e040',
+                        fontSize: 12,
+                        fontWeight: '800',
+                      }}>
+                      {showOriginalComparison ? '🔴 HOLDING: ORIGINAL PHOTO' : styleLabel}
                     </Text>
                   </View>
 
@@ -401,6 +449,51 @@ export function Studio() {
                       <Text style={{ color: '#ffffff', fontSize: 11 }}>Rendering...</Text>
                     </View>
                   )}
+
+                  {/* Quick B&W Gray Mode Toggle Button */}
+                  <Pressable
+                    onPress={() => {
+                      if (selectedStyleId === 'gray-mode') {
+                        const fallback = ND_STYLES.find((s) => s.id === 'ios-rich-contrast') ?? ND_STYLES[0];
+                        handleSelectStyle(fallback ?? 'original');
+                      } else {
+                        const gray = ND_STYLES.find((s) => s.id === 'gray-mode');
+                        if (gray) handleSelectStyle(gray);
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      bottom: 14,
+                      left: 14,
+                      backgroundColor:
+                        selectedStyleId === 'gray-mode' ? '#ffffff' : 'rgba(0, 0, 0, 0.85)',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: selectedStyleId === 'gray-mode' ? '#ffffff' : '#666',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}>
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor:
+                          selectedStyleId === 'gray-mode' ? '#000000' : '#e2e8f0',
+                      }}
+                    />
+                    <Text
+                      style={{
+                        color: selectedStyleId === 'gray-mode' ? '#000000' : '#ffffff',
+                        fontSize: 12,
+                        fontWeight: '800',
+                      }}>
+                      {selectedStyleId === 'gray-mode' ? 'Gray Mode ON' : '⚪ Gray Mode'}
+                    </Text>
+                  </Pressable>
 
                   {/* Hold to Compare Button */}
                   {selectedStyleId !== 'original' && (
@@ -470,6 +563,7 @@ export function Studio() {
                     { id: 'all', label: 'All' },
                     { id: 'ios', label: 'iOS Styles' },
                     { id: 'leica', label: 'Leica' },
+                    { id: 'bw', label: 'B&W / Gray' },
                     { id: 'nd', label: 'ND Core' },
                   ] as const
                 ).map((cat) => (
@@ -523,6 +617,7 @@ export function Studio() {
                   const isSelected = selectedStyleId === style.id;
                   const isLeica = style.category === 'leica';
                   const isIos = style.category === 'ios';
+                  const isBw = style.category === 'bw';
                   return (
                     <Pressable
                       key={style.id}
@@ -548,6 +643,11 @@ export function Studio() {
                         {isIos && (
                           <View style={{ backgroundColor: '#2563eb', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 }}>
                             <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>iOS</Text>
+                          </View>
+                        )}
+                        {isBw && (
+                          <View style={{ backgroundColor: '#475569', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 }}>
+                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>B&W</Text>
                           </View>
                         )}
                       </View>

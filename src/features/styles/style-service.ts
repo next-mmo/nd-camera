@@ -29,7 +29,10 @@ interface NativeNDFilterInterface {
   }>;
 }
 
-const NativeNDFilter = NativeModules.NDFilter as NativeNDFilterInterface | undefined;
+export function isNativeFilterAvailable(): boolean {
+  const mod = NativeModules.NDFilter as NativeNDFilterInterface | undefined;
+  return typeof mod?.applyColorMatrix === 'function';
+}
 
 /**
  * Render a styled photo using the exact same SDR color matrix recipe for preview and export.
@@ -67,8 +70,10 @@ export async function renderStyledPhoto(
   const recipe = createEditRecipe(photo.id, profileId, strength, tone, warmth, effectiveVignette);
   const matrix = getStyleMatrix(recipe.profileId, recipe.strength, recipe.tone, recipe.warmth);
 
-  if (NativeNDFilter?.applyColorMatrix) {
-    const rendered = await NativeNDFilter.applyColorMatrix(
+  const nativeModule = NativeModules.NDFilter as NativeNDFilterInterface | undefined;
+
+  if (nativeModule?.applyColorMatrix) {
+    const rendered = await nativeModule.applyColorMatrix(
       photo.uri,
       matrix,
       recipe.vignette,
@@ -84,7 +89,13 @@ export async function renderStyledPhoto(
     };
   }
 
-  // Fallback for platforms without native module (e.g. web or dev preview)
+  if (Platform.OS === 'android' || Platform.OS === 'ios') {
+    throw new Error(
+      'NDFilter native module not detected. Please launch the installed ND Camera APK (nd-camera-debug.apk) instead of Expo Go.',
+    );
+  }
+
+  // Fallback for web preview
   return {
     uri: photo.uri,
     width: photo.width,

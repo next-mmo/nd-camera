@@ -1,16 +1,32 @@
 package com.nextdev.ndcamera
 
-import android.view.View
-import com.facebook.react.ReactPackage
+import com.facebook.react.BaseReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.uimanager.ReactShadowNode
-import com.facebook.react.uimanager.ViewManager
+import com.facebook.react.module.model.ReactModuleInfo
+import com.facebook.react.module.model.ReactModuleInfoProvider
 
-class NDFilterPackage : ReactPackage {
-    override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
-        listOf(NDFilterModule(reactContext))
+class NDFilterPackage : BaseReactPackage() {
+    override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {
+        return if (name == NDFilterModule.NAME) {
+            NDFilterModule(reactContext)
+        } else {
+            null
+        }
+    }
 
-    override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<View, ReactShadowNode<*>>> =
-        emptyList()
+    override fun getReactModuleInfoProvider(): ReactModuleInfoProvider {
+        return ReactModuleInfoProvider {
+            val map = HashMap<String, ReactModuleInfo>()
+            map[NDFilterModule.NAME] = ReactModuleInfo(
+                NDFilterModule.NAME,
+                NDFilterModule::class.java.name,
+                false,
+                false,
+                false,
+                false
+            )
+            map
+        }
+    }
 }
