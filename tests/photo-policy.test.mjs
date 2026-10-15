@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assertLocalUri, assertImageSize, displayName, imageExtension, normalizeImageMime, parseSharedImage, MAX_IMAGE_BYTES } from '../src/features/photos/photo-policy.ts';
-import { ND_STYLES, requireAvailableProfile } from '../src/features/styles/catalog.ts';
+import { ND_STYLES, requireAvailableProfile, getStyleMatrix, createEditRecipe } from '../src/features/styles/catalog.ts';
 
 test('accepts a local Android image share', () => {
   assert.deepEqual(parseSharedImage([{ shareType: 'image', mimeType: 'image/jpeg', value: 'content://photos/123' }]), { uri: 'content://photos/123', mimeType: 'image/jpeg' });
@@ -50,11 +50,32 @@ test('sanitizes display names without using them as output paths', () => {
   assert.equal(displayName(undefined, 'Photo.jpg'), 'Photo.jpg');
   assert.equal(displayName('a'.repeat(200), 'Photo.jpg').length, 120);
 });
-test('unimplemented profiles cannot be exported as working styles', () => {
+test('supported profiles can be used as working styles', () => {
   assert.doesNotThrow(() => requireAvailableProfile('original'));
   for (const style of ND_STYLES) {
-    assert.equal(style.available, false);
-    assert.throws(() => requireAvailableProfile(style.id), /not implemented/);
+    assert.equal(style.available, true);
+    assert.doesNotThrow(() => requireAvailableProfile(style.id));
   }
-  assert.throws(() => requireAvailableProfile('unknown'));
+  assert.throws(() => requireAvailableProfile('unknown'), /not available/);
 });
+
+test('generates and bounds valid style color matrices', () => {
+  const original = getStyleMatrix('original', 1);
+  assert.equal(original.length, 20);
+  assert.equal(original[0], 1);
+
+  const natural = getStyleMatrix('natural', 1);
+  assert.equal(natural.length, 20);
+  assert.equal(natural[0], 1.06);
+
+  const naturalZero = getStyleMatrix('natural', 0);
+  assert.deepEqual(naturalZero, original);
+
+  const naturalHalf = getStyleMatrix('natural', 0.5);
+  assert.equal(Number(naturalHalf[0].toFixed(3)), 1.03);
+
+  const recipe = createEditRecipe('test-id', 'natural', 1.5);
+  assert.equal(recipe.strength, 1.0);
+  assert.equal(recipe.profileId, 'natural');
+});
+
