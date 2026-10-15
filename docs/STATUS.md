@@ -8,27 +8,19 @@ Initialized on 2026-10-14.
 - The original template generator created nine baseline files before ND changes.
 - npm run check:starter: passed.
 - npm test: 11 policy/catalog tests passed.
-- tsc -p tsconfig.core.json: passed for dependency-free policy/catalog modules.
-- Syntax transpilation: passed for all five application TS/TSX modules.
-
-These are source checks, not end-to-end app validation.
+- npm run typecheck: passed.
+- npm run export:android: passed (bundled 825 modules cleanly).
+- Android development build: compiled and installed on Pixel 7 Pro emulator.
+- Metro development server: running and actively serving the application.
 
 ## Not verified
 
-Dependency installation/lockfile resolution could not complete because package
-registry access was unavailable. Full app type checking, Metro export, config
-plugins, Android/APK builds, and physical-device tests have not run locally.
-Snapseed handoff, provider permissions, lifecycle behavior, codecs, iOS, and web
-runtime behavior remain unverified. No package lockfile is fabricated.
-
-Dependency installation, Expo alignment, app type checking, and Android
-JavaScript export are verified locally once dependencies are installed; a passing
-bundle is not an APK or a physical-device test.
+Physical-device validation on Pixel 9 Pro XL, Snapseed handoff, provider permissions,
+real lifecycle behavior, raw codecs, iOS, and web runtime behavior remain unverified on hardware.
 
 ## Next acceptance gates
 
-1. Resolve and commit the lockfile; pass full type and bundle checks.
-2. Build on Pixel 9 Pro XL; test picker cancellation, corrupt/large files,
+1. Physical-device testing on Pixel 9 Pro XL; test picker cancellation, corrupt/large files,
    cold/warm/repeated shares, original preview, and share-out.
 3. Verify actual Snapseed and Google Photos handoffs on the device.
 4. Implement ND style preview and full-resolution SDR export; calibrate against
