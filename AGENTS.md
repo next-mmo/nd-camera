@@ -10,4 +10,6 @@ Work in next-mmo/nd-camera. This is an application, not a fork of the Universal 
 - Keep platform adapters separate from UI and pure policy logic. Reject remote incoming URIs before resolving/copying.
 - Styles need matching preview/full-resolution export, reference-scene validation, and an explicit SDR/HDR policy.
 - Run npm run check:starter, npm test, npm run typecheck, and npm run export:android. Report unavailable checks honestly.
+- Do not use GitHub Actions, workflows, or remote CI compute. Perform all tests, checks, exports, and native builds locally on the machine to save compute.
+- For physical Android device builds, ensure APKs are compiled with ARM64 (`arm64-v8a`) architecture support.
 - Keep docs/STATUS.md accurate; source tests are not native/device tests.
