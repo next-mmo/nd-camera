@@ -355,6 +355,7 @@ export function Studio() {
                 <View style={{ position: 'relative', width: '100%', height: 380, backgroundColor: '#070b10' }}>
                   {displayUri && (
                     <Image
+                      key={displayUri}
                       accessibilityLabel={`Photo: ${originalPhoto.name ?? 'Imported image'}`}
                       source={{ uri: displayUri }}
                       resizeMode="contain"
