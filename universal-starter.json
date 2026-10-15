@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/next-mmo/universal-apps",
+  "commit": "a81fa859ded50f640da42084156db5b6e2affdc9",
+  "template": "expo-uniwind",
+  "sourcePath": "packages/cli/source/templates/expo.mjs",
+  "sourceBlobSha": "0a6cd77972a7db45223c2bb70453d08ec53552cc",
+  "licenseBlobSha": "ba5d8851caef247e8c4d4d3b87d11e599b472e23",
+  "generation": "Executed the unmodified getExpoTemplateFiles(\"nd-camera\") function, then applied ND adaptations. The full CLI was not run.",
+  "adaptations": [
+    "Aligned Expo 57, React 19.2.3, and React Native 0.86.3 using Expo sdk-57 reference files.",
+    "Removed the unused direct Metro dependency and undeclared oxlint command.",
+    "Added original import/preview/sharing, Android share-in, tests, and documentation.",
+    "No full-resolution style processing, stock camera plug-in, or camera capture is implemented."
+  ]
+}
