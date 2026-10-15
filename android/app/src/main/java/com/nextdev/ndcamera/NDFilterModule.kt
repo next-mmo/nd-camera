@@ -3,10 +3,13 @@ package com.nextdev.ndcamera
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import com.facebook.react.bridge.Arguments
@@ -30,6 +33,7 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
     fun applyColorMatrix(
         sourcePathOrUri: String,
         matrixValues: ReadableArray,
+        vignetteIntensity: Double,
         quality: Int,
         promise: Promise
     ) {
@@ -76,7 +80,7 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
                     return@Thread
                 }
 
-                // Handle orientation if needed
+                // Handle EXIF orientation
                 val rotationMatrix = Matrix()
                 when (exifOrientation) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> rotationMatrix.postRotate(90f)
@@ -114,7 +118,6 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
                 }
 
                 // Android ColorMatrix expects offset values in range 0..255 (not 0..1)
-                // Normalize 4th, 9th, 14th, 19th indices if in 0..1 scale
                 floatArray[4] *= 255f
                 floatArray[9] *= 255f
                 floatArray[14] *= 255f
@@ -123,6 +126,24 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
                 val colorMatrix = ColorMatrix(floatArray)
                 paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
                 canvas.drawBitmap(orientedBitmap, 0f, 0f, paint)
+
+                // Apply optional optical vignette (Leica style)
+                if (vignetteIntensity > 0.001) {
+                    val clampedVignette = Math.min(1.0, Math.max(0.0, vignetteIntensity))
+                    val radius = Math.hypot(width.toDouble(), height.toDouble()).toFloat() * 0.55f
+                    val alpha = (clampedVignette * 175).toInt()
+                    val vignetteShader = RadialGradient(
+                        width * 0.5f,
+                        height * 0.5f,
+                        radius,
+                        intArrayOf(Color.TRANSPARENT, Color.argb(alpha, 0, 0, 0)),
+                        floatArrayOf(0.42f, 1.0f),
+                        Shader.TileMode.CLAMP
+                    )
+                    val vPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+                    vPaint.shader = vignetteShader
+                    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), vPaint)
+                }
 
                 val exportDir = File(reactContext.cacheDir, "nd-camera/exports")
                 if (!exportDir.exists()) {

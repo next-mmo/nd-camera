@@ -74,8 +74,35 @@ test('generates and bounds valid style color matrices', () => {
   const naturalHalf = getStyleMatrix('natural', 0.5);
   assert.equal(Number(naturalHalf[0].toFixed(3)), 1.03);
 
-  const recipe = createEditRecipe('test-id', 'natural', 1.5);
+  const recipe = createEditRecipe('test-id', 'natural', 1.5, 0.5, -0.2, 0.3);
   assert.equal(recipe.strength, 1.0);
   assert.equal(recipe.profileId, 'natural');
+  assert.equal(recipe.tone, 0.5);
+  assert.equal(recipe.warmth, -0.2);
+  assert.equal(recipe.vignette, 0.3);
 });
+
+test('supports iOS Photographic Styles and Leica camera profiles', () => {
+  const iosRich = getStyleMatrix('ios-rich-contrast', 1);
+  assert.equal(iosRich.length, 20);
+  // Rich contrast has higher contrast and lower shadow offset
+  assert.ok(iosRich[0] > 1.1);
+  assert.ok(iosRich[4] < 0);
+
+  const leicaAuth = getStyleMatrix('leica-authentic', 1);
+  assert.equal(leicaAuth.length, 20);
+
+  const leicaMono = getStyleMatrix('leica-mono', 1);
+  assert.equal(leicaMono.length, 20);
+  // Monochrom has equal R, G, B weights per channel
+  assert.equal(leicaMono[0], leicaMono[5]);
+  assert.equal(leicaMono[5], leicaMono[10]);
+
+  // Fine-tuning adjustments shift values predictably
+  const warm = getStyleMatrix('ios-standard', 1, 0, 0.5);
+  const cool = getStyleMatrix('ios-standard', 1, 0, -0.5);
+  assert.ok(warm[0] > cool[0]); // warmer has more red
+  assert.ok(warm[12] < cool[12]); // warmer has less blue
+});
+
 

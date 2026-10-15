@@ -1,7 +1,7 @@
 import { NativeModules, Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import type { ImportedPhoto } from '../photos/photo-policy';
-import { createEditRecipe, getStyleMatrix, isAvailableProfile } from './catalog';
+import { createEditRecipe, getStyleMatrix, isAvailableProfile, ND_STYLES } from './catalog';
 
 export interface RenderResult {
   readonly uri: string;
@@ -10,12 +10,16 @@ export interface RenderResult {
   readonly byteSize: number;
   readonly profileId: string;
   readonly strength: number;
+  readonly tone: number;
+  readonly warmth: number;
+  readonly vignette: number;
 }
 
 interface NativeNDFilterInterface {
   applyColorMatrix(
     sourcePathOrUri: string,
     matrixValues: number[],
+    vignetteIntensity: number,
     quality: number,
   ): Promise<{
     uri: string;
@@ -29,12 +33,15 @@ const NativeNDFilter = NativeModules.NDFilter as NativeNDFilterInterface | undef
 
 /**
  * Render a styled photo using the exact same SDR color matrix recipe for preview and export.
- * Rejects unavailable profiles.
+ * Supports iOS Photographic Styles, Leica profiles, tone/warmth adjustments, and optical vignette.
  */
 export async function renderStyledPhoto(
   photo: ImportedPhoto,
   profileId: string,
   strength = 1,
+  tone = 0,
+  warmth = 0,
+  vignette?: number,
 ): Promise<RenderResult> {
   if (profileId === 'original') {
     return {
@@ -44,6 +51,9 @@ export async function renderStyledPhoto(
       byteSize: photo.byteSize,
       profileId: 'original',
       strength: 1,
+      tone: 0,
+      warmth: 0,
+      vignette: 0,
     };
   }
 
@@ -51,15 +61,26 @@ export async function renderStyledPhoto(
     throw new Error(`ND style profile "${profileId}" is not implemented.`);
   }
 
-  const recipe = createEditRecipe(photo.id, profileId, strength);
-  const matrix = getStyleMatrix(recipe.profileId, recipe.strength);
+  const def = ND_STYLES.find((s) => s.id === profileId);
+  const effectiveVignette = vignette !== undefined ? vignette : (def?.defaultVignette ?? 0);
+
+  const recipe = createEditRecipe(photo.id, profileId, strength, tone, warmth, effectiveVignette);
+  const matrix = getStyleMatrix(recipe.profileId, recipe.strength, recipe.tone, recipe.warmth);
 
   if (NativeNDFilter?.applyColorMatrix) {
-    const rendered = await NativeNDFilter.applyColorMatrix(photo.uri, matrix, 95);
+    const rendered = await NativeNDFilter.applyColorMatrix(
+      photo.uri,
+      matrix,
+      recipe.vignette,
+      95,
+    );
     return {
       ...rendered,
       profileId: recipe.profileId,
       strength: recipe.strength,
+      tone: recipe.tone,
+      warmth: recipe.warmth,
+      vignette: recipe.vignette,
     };
   }
 
@@ -71,6 +92,9 @@ export async function renderStyledPhoto(
     byteSize: photo.byteSize,
     profileId: recipe.profileId,
     strength: recipe.strength,
+    tone: recipe.tone,
+    warmth: recipe.warmth,
+    vignette: recipe.vignette,
   };
 }
 
@@ -97,9 +121,10 @@ export async function shareStyled(
     'image/webp': 'org.webmproject.webp',
   };
 
+  const styleDef = ND_STYLES.find((s) => s.id === rendered.profileId);
   const styleLabel = rendered.profileId === 'original'
     ? 'original'
-    : `${rendered.profileId} style (${Math.round(rendered.strength * 100)}%)`;
+    : `${styleDef?.name ?? rendered.profileId} (${Math.round(rendered.strength * 100)}%)`;
 
   await Sharing.shareAsync(rendered.uri, {
     mimeType: photo.mimeType,
