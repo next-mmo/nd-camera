@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">ND Camera</string>
+  <string name="share_into_scheme" translatable="false">nd-camera</string>
+</resources>

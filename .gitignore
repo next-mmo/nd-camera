@@ -4,7 +4,6 @@ dist/
 web-build/
 .checks/
 coverage/
-android/
 ios/
 *.tsbuildinfo
 src/uniwind-types.d.ts
