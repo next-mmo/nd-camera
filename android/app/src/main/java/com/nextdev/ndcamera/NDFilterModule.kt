@@ -1,5 +1,6 @@
 package com.nextdev.ndcamera
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -45,8 +46,9 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
     ) {
         Thread {
             try {
+                val parsedUri = Uri.parse(sourcePathOrUri)
                 val cleanPath = if (sourcePathOrUri.startsWith("file://")) {
-                    sourcePathOrUri.substring(7)
+                    parsedUri.path ?: sourcePathOrUri.substring(7)
                 } else {
                     sourcePathOrUri
                 }
@@ -62,20 +64,19 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
                             ExifInterface.TAG_ORIENTATION,
                             ExifInterface.ORIENTATION_NORMAL
                         )
-                    } catch (_: Exception) {}
+                    } catch (_: Throwable) {}
                     BitmapFactory.decodeFile(srcFile.absolutePath)
                 } else {
-                    val uri = Uri.parse(sourcePathOrUri)
                     try {
-                        reactContext.contentResolver.openInputStream(uri)?.use { stream ->
+                        reactContext.contentResolver.openInputStream(parsedUri)?.use { stream ->
                             val exif = ExifInterface(stream)
                             exifOrientation = exif.getAttributeInt(
                                 ExifInterface.TAG_ORIENTATION,
                                 ExifInterface.ORIENTATION_NORMAL
                             )
                         }
-                    } catch (_: Exception) {}
-                    inputStream = reactContext.contentResolver.openInputStream(uri)
+                    } catch (_: Throwable) {}
+                    inputStream = reactContext.contentResolver.openInputStream(parsedUri)
                     inputStream?.use { stream ->
                         BitmapFactory.decodeStream(stream)
                     }
@@ -175,9 +176,37 @@ class NDFilterModule(private val reactContext: ReactApplicationContext) :
                 result.putDouble("byteSize", outputFile.length().toDouble())
 
                 promise.resolve(result)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 promise.reject("RENDER_ERROR", "Rendering failed: ${e.message}", e)
             }
         }.start()
+    }
+
+    @ReactMethod
+    fun isAppInstalled(packageName: String, promise: Promise) {
+        try {
+            val pm = reactContext.packageManager
+            pm.getPackageInfo(packageName, 0)
+            promise.resolve(true)
+        } catch (_: Throwable) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun openApp(packageName: String, promise: Promise) {
+        try {
+            val pm = reactContext.packageManager
+            val intent = pm.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                reactContext.startActivity(intent)
+                promise.resolve(true)
+            } else {
+                promise.resolve(false)
+            }
+        } catch (e: Throwable) {
+            promise.reject("LAUNCH_ERROR", "Failed to launch $packageName: ${e.message}", e)
+        }
     }
 }

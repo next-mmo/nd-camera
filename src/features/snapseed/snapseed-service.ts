@@ -1,17 +1,59 @@
-import { Linking, Platform, Share } from 'react-native';
+import { Linking, NativeModules, Platform, Share } from 'react-native';
 import { SnapseedQRPreset } from './catalog';
 
 const SNAPSEED_PACKAGE = 'com.niksoftware.snapseed';
 const PLAY_STORE_URL = `market://details?id=${SNAPSEED_PACKAGE}`;
 const WEB_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${SNAPSEED_PACKAGE}`;
 const APP_STORE_URL = 'https://apps.apple.com/app/snapseed/id439438619';
+const IOS_SNAPSEED_URL = 'snapseed://';
+
+interface NDFilterNativeInterface {
+  isAppInstalled?(packageName: string): Promise<boolean>;
+  openApp?(packageName: string): Promise<boolean>;
+}
 
 /**
- * Attempts to launch Google Snapseed on the device, or navigates to the store page.
+ * Checks whether Google Snapseed is installed on the device.
+ */
+export async function isSnapseedInstalled(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    const ndFilter = NativeModules.NDFilter as NDFilterNativeInterface | undefined;
+    if (typeof ndFilter?.isAppInstalled === 'function') {
+      try {
+        return await ndFilter.isAppInstalled(SNAPSEED_PACKAGE);
+      } catch {
+        return false;
+      }
+    }
+  } else if (Platform.OS === 'ios') {
+    try {
+      return await Linking.canOpenURL(IOS_SNAPSEED_URL);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Attempts to launch Google Snapseed on the device.
+ * If installed, launches the app directly. Only navigates to the store if Snapseed is absent.
  */
 export async function openSnapseed(): Promise<{ success: boolean; openedStore: boolean }> {
   if (Platform.OS === 'android') {
-    // Attempt to open Play Store / app via market link
+    const ndFilter = NativeModules.NDFilter as NDFilterNativeInterface | undefined;
+    if (typeof ndFilter?.openApp === 'function') {
+      try {
+        const launched = await ndFilter.openApp(SNAPSEED_PACKAGE);
+        if (launched) {
+          return { success: true, openedStore: false };
+        }
+      } catch (err) {
+        console.warn('Native openApp for Snapseed failed:', err);
+      }
+    }
+
+    // Snapseed is not installed or launch failed: fall back to Google Play Store
     try {
       const canOpenMarket = await Linking.canOpenURL(PLAY_STORE_URL);
       if (canOpenMarket) {
@@ -31,6 +73,16 @@ export async function openSnapseed(): Promise<{ success: boolean; openedStore: b
   }
 
   if (Platform.OS === 'ios') {
+    try {
+      const canOpenApp = await Linking.canOpenURL(IOS_SNAPSEED_URL);
+      if (canOpenApp) {
+        await Linking.openURL(IOS_SNAPSEED_URL);
+        return { success: true, openedStore: false };
+      }
+    } catch {
+      // Fallback to App Store
+    }
+
     try {
       await Linking.openURL(APP_STORE_URL);
       return { success: true, openedStore: true };
